@@ -26,6 +26,19 @@ A separate high-severity case on the same host involved Defender tampering, `VNL
 | Oct 11–13 | Successful logons involving `system32` and `system16` | Evidence 6 |
 | Oct 15 | Automated uncontain of `WDAGUtilityAccounts` marked Completed | Evidence 13 |
 
+## How I followed the evidence
+
+I didn't start by searching for the three accounts or `VNLIKE247.exe`. The investigation started with the RDP alert, and each finding led to the next query:
+
+1. **Validate the alert.** I checked `DeviceLogonEvents` for the account, host, login type, source IP and timestamp. Times in this report are CDT; Defender query timestamps are UTC.
+2. **Check what the user did after login.** I looked at `DeviceProcessEvents`. My first four-minute window missed `net user`, so I widened the search instead of treating the early Windows processes as the whole session.
+3. **Follow the next administrator session.** I reviewed Oct 7 logons. The RDP event had no source IP, so I matched its Logon ID to an `Unlock` event, then used `ProcessRemoteSessionIP` to find the session's process activity.
+4. **Test whether the changes persisted.** After finding the local-account, registry and task commands, I searched later authentication across devices for `system16`, `system32` and `system64`. That revealed successful use on Oct 11–13, but no confirmed second internal host.
+5. **Check the broader host story.** Looking at other alerts on the same endpoint led me to separate Case 1296. I checked Defender tampering alerts, the `VNLIKE247.exe` process event and its wider network activity. Only after that did I narrow the network query to the IP named in the exfiltration detection.
+6. **Check response records.** I reviewed Defender's automated actions to see whether the host had actually been isolated. The isolation actions were skipped.
+
+The narrower queries and screenshots below document findings discovered during these broader checks; they weren't the starting point of the hunt.
+
 ## What I found
 
 ### RDP activity and persistence
