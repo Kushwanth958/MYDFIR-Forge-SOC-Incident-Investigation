@@ -172,4 +172,4 @@ Outstanding questions: Was the original administrator access authorized? Were bo
 
 **Outcome:** Case 1290 documents malicious account persistence. Case 1296 supports **True Positive / Multi-Staged Attack**. My investigation is ready for handoff; Incident 2565 should stay In Progress until the response team verifies recovery.
 
-[Original screenshot index](EVIDENCE_INDEX.md) · [Hunting queries](queries/investigation.kql) · [Investigation lessons](LEARNING_NOTES.md)
+[Hunting queries](queries/investigation.kql) · [Investigation lessons](LEARNING_NOTES.md)
