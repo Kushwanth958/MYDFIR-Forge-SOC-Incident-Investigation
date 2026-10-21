@@ -18,7 +18,6 @@ The cases involve the same host, but I couldn't prove they were operated by the 
 ## Files
 
 - [Investigation report](INVESTIGATION_REPORT.md) — findings, timeline, screenshots, indicators, and IR handoff
-- [Original evidence screenshots](EVIDENCE_INDEX.md) — 13 images referenced in the report
 - [KQL hunting queries](queries/investigation.kql) — searches used during the investigation and screenshot collection
 - [Learning notes](LEARNING_NOTES.md) — pivots that worked, dead ends, and what I'd do differently
 
