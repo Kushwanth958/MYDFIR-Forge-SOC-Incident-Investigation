@@ -17,40 +17,40 @@ A separate high-severity case on the same host involved Defender tampering, `VNL
 | When (CDT) | What happened | Evidence |
 | --- | --- | --- |
 | Oct 6, 3:29 PM | `administrator` RDP success from `2.147.252.234` | Starting alert / `DeviceLogonEvents` |
-| Oct 6, 3:34 PM | `explorer.exe → cmd.exe → net.exe`, running `net user` | [Fig. 1](evidence/01-oct06-account-discovery.png) |
-| Oct 7, 12:40 PM | Administrator RDP session; matching Unlock event linked to `116.118.45.151` | [Fig. 2](evidence/02-oct07-rdp-correlation.png) |
-| Oct 7, 12:47 PM | `system16`, `system32`, `system64` created and added to Administrators; registry hiding and recurring task configured | [Fig. 3](evidence/03-oct07-account-creation.png), [Fig. 4](evidence/04-oct07-persistence-activity.png), [Fig. 5](evidence/05-oct07-scheduled-task.png) |
+| Oct 6, 3:34 PM | `explorer.exe → cmd.exe → net.exe`, running `net user` | [Evidence 1](#evidence-1) |
+| Oct 7, 12:40 PM | Administrator RDP session; matching Unlock event linked to `116.118.45.151` | [Evidence 2](#evidence-2) |
+| Oct 7, 12:47 PM | `system16`, `system32`, `system64` created and added to Administrators; registry hiding and recurring task configured | [Evidence 3](#evidence-3), [Evidence 4](#evidence-4), [Evidence 5](#evidence-5) |
 | Oct 8, 1:00 AM | Another administrator RDP login; source `116.98.254.228` | `DeviceLogonEvents` |
-| Oct 10, morning | Defender tampering, `dControl.exe`, and `VNLIKE247.exe` execution | [Fig. 8](evidence/08-defender-tampering.png), [Fig. 9](evidence/09-vnlike-execution.png) |
-| Oct 10, 5:56 AM | Defender reported staging/transfer; matching TCP connection to `149.154.166.110:443` | [Fig. 11](evidence/11-telegram-ip-connection.png), [Fig. 12](evidence/12-defender-exfil-event.png) |
-| Oct 11–13 | Successful logons involving `system32` and `system16` | [Fig. 6](evidence/06-oct11-13-account-reuse.png) |
-| Oct 15 | Automated uncontain of `WDAGUtilityAccounts` marked Completed | [Fig. 13](evidence/13-response-actions.png) |
+| Oct 10, morning | Defender tampering, `dControl.exe`, and `VNLIKE247.exe` execution | [Evidence 8](#evidence-8), [Evidence 9](#evidence-9) |
+| Oct 10, 5:56 AM | Defender reported staging/transfer; matching TCP connection to `149.154.166.110:443` | [Evidence 11](#evidence-11), [Evidence 12](#evidence-12) |
+| Oct 11–13 | Successful logons involving `system32` and `system16` | [Evidence 6](#evidence-6) |
+| Oct 15 | Automated uncontain of `WDAGUtilityAccounts` marked Completed | [Evidence 13](#evidence-13) |
 
 ## What I found
 
 ### RDP activity and persistence
 
-I started with the Oct 6 RDP alert and checked the successful login against `DeviceLogonEvents`. My first process query only covered four minutes. That was too short: when I widened it, I found `net user` account enumeration around 3:34 PM [Fig. 1](evidence/01-oct06-account-discovery.png).
+I started with the Oct 6 RDP alert and checked the successful login against `DeviceLogonEvents`. My first process query only covered four minutes. That was too short: when I widened it, I found `net user` account enumeration around 3:34 PM [Evidence 1](#evidence-1).
 
-The Oct 7 session was more revealing. Its `RemoteInteractive` record had no `RemoteIP`, but an `Unlock` event with the same Logon ID (`72229258`) had `116.118.45.151` [Fig. 2](evidence/02-oct07-rdp-correlation.png). My first attempt to link processes by Logon ID did not return useful results. Pivoting on `ProcessRemoteSessionIP` worked.
+The Oct 7 session was more revealing. Its `RemoteInteractive` record had no `RemoteIP`, but an `Unlock` event with the same Logon ID (`72229258`) had `116.118.45.151` [Evidence 2](#evidence-2). My first attempt to link processes by Logon ID did not return useful results. Pivoting on `ProcessRemoteSessionIP` worked.
 
-From that session, process logs showed commands creating `system16`, `system32`, and `system64`, adding them to the local Administrators group, and hiding them with `Winlogon\SpecialAccounts\UserList` registry entries [Fig. 3](evidence/03-oct07-account-creation.png), [Fig. 4](evidence/04-oct07-persistence-activity.png). A task named `ResetUserPasswords` ran `C:\Scripts\ResetPasswords.cmd` every ten minutes with highest privileges. I found repeated script-related execution after task creation [Fig. 5](evidence/05-oct07-scheduled-task.png).
+From that session, process logs showed commands creating `system16`, `system32`, and `system64`, adding them to the local Administrators group, and hiding them with `Winlogon\SpecialAccounts\UserList` registry entries [Evidence 3](#evidence-3), [Evidence 4](#evidence-4). A task named `ResetUserPasswords` ran `C:\Scripts\ResetPasswords.cmd` every ten minutes with highest privileges. I found repeated script-related execution after task creation [Evidence 5](#evidence-5).
 
-I then checked whether those accounts were actually used. `system32` logged on successfully on Oct 11, including a `RemoteInteractive` session; `system16` and `system32` had successful **Network** logons on Oct 13 [Fig. 6](evidence/06-oct11-13-account-reuse.png). I checked other devices too, but found no evidence of access to a second internal host. The Oct 13 successes were Network logons, not RDP.
+I then checked whether those accounts were actually used. `system32` logged on successfully on Oct 11, including a `RemoteInteractive` session; `system16` and `system32` had successful **Network** logons on Oct 13 [Evidence 6](#evidence-6). I checked other devices too, but found no evidence of access to a second internal host. The Oct 13 successes were Network logons, not RDP.
 
 ### Defender tampering and suspicious execution
 
-During host scoping, I found a separate High-severity compromised-device case with 17 alerts [Fig. 7](evidence/07-case1296-overview.png). The Oct 10 alert story included `dControl.exe` (DefenderControl), attempts to turn off antivirus, Defender registry/service changes, and PowerShell activity [Fig. 8](evidence/08-defender-tampering.png). This is evidence of attempted defense evasion.
+During host scoping, I found a separate High-severity compromised-device case with 17 alerts [Evidence 7](#evidence-7). The Oct 10 alert story included `dControl.exe` (DefenderControl), attempts to turn off antivirus, Defender registry/service changes, and PowerShell activity [Evidence 8](#evidence-8). This is evidence of attempted defense evasion.
 
-`VNLIKE247.exe` executed around 5:52 AM under `wdagutilityaccounts`, launched by `explorer.exe` [Fig. 9](evidence/09-vnlike-execution.png). Its SHA256 was:
+`VNLIKE247.exe` executed around 5:52 AM under `wdagutilityaccounts`, launched by `explorer.exe` [Evidence 9](#evidence-9). Its SHA256 was:
 
 `7392942a2151c61d587d8aa557f30cad09bf2cb528e420f855f2fd84f4fa5072`
 
 ### Network activity and suspected transfer
 
-The broad network search for `VNLIKE247.exe` produced **703 IP/port groupings**, not 703 distinct IPs [Fig. 10](evidence/10-vnlike-network-summary.png). I then checked the destination from Defender's exfiltration event. `DeviceNetworkEvents` confirmed `VNLIKE247.exe` made a successful TCP connection to `149.154.166.110:443` [Fig. 11](evidence/11-telegram-ip-connection.png).
+The broad network search for `VNLIKE247.exe` produced **703 IP/port groupings**, not 703 distinct IPs [Evidence 10](#evidence-10). I then checked the destination from Defender's exfiltration event. `DeviceNetworkEvents` confirmed `VNLIKE247.exe` made a successful TCP connection to `149.154.166.110:443` [Evidence 11](#evidence-11).
 
-The device timeline reported `SuspiciousProcessDataExfiltration` at 5:56:25 AM, with staging under `C:\Users\WDAGUtilityAccounts\Desktop\vnlike` [Fig. 12](evidence/12-defender-exfil-event.png). IP-registration research associated the destination with Telegram infrastructure. Defender flagged a transfer, but I never found out what was sent, how much, or to whom.
+The device timeline reported `SuspiciousProcessDataExfiltration` at 5:56:25 AM, with staging under `C:\Users\WDAGUtilityAccounts\Desktop\vnlike` [Evidence 12](#evidence-12). IP-registration research associated the destination with Telegram infrastructure. Defender flagged a transfer, but I never found out what was sent, how much, or to whom.
 
 The logs spell this name three ways (`wdagutilityaccounts`, `WDAGUtilityAccounts`, and `WDAGUtilityAccount`), so I kept each as recorded. Staging files under what looks like a normally non-interactive Windows utility account is unusual and worth checking.
 
@@ -60,7 +60,7 @@ I also checked Rclone and WinRAR. The observed Rclone command downloaded an arch
 
 ## Response status
 
-These were **automated Defender actions**, not changes I made [Fig. 13](evidence/13-response-actions.png):
+These were **automated Defender actions**, not changes I made [Evidence 13](#evidence-13):
 
 | Action | Status |
 | --- | --- |
@@ -100,3 +100,59 @@ This was a lab investigation. I still do not know whether the original administr
 **Outcome:** Case 1290 documents malicious account persistence. Case 1296 supports **True Positive / Multi-Staged Attack**. My investigation is ready for handoff; Incident 2565 should stay In Progress until the response team verifies recovery.
 
 [Original screenshot index](EVIDENCE_INDEX.md) · [Hunting queries](queries/investigation.kql) · [Investigation lessons](LEARNING_NOTES.md)
+
+## Evidence screenshots
+
+The original Defender screenshots are displayed below in investigation order.
+
+### Evidence 1: October 6 account discovery
+
+![Evidence 1 — October 6 account discovery](evidence/01-oct06-account-discovery.png)
+
+### Evidence 2: October 7 RDP correlation
+
+![Evidence 2 — October 7 RDP correlation](evidence/02-oct07-rdp-correlation.png)
+
+### Evidence 3: Local account creation
+
+![Evidence 3 — Local account creation](evidence/03-oct07-account-creation.png)
+
+### Evidence 4: Registry and task persistence
+
+![Evidence 4 — Registry and task persistence](evidence/04-oct07-persistence-activity.png)
+
+### Evidence 5: Scheduled task creation
+
+![Evidence 5 — Scheduled task creation](evidence/05-oct07-scheduled-task.png)
+
+### Evidence 6: Later account logons
+
+![Evidence 6 — Later account logons](evidence/06-oct11-13-account-reuse.png)
+
+### Evidence 7: Compromised device case overview
+
+![Evidence 7 — Compromised device case overview](evidence/07-case1296-overview.png)
+
+### Evidence 8: Defender tampering
+
+![Evidence 8 — Defender tampering](evidence/08-defender-tampering.png)
+
+### Evidence 9: VNLIKE247 execution
+
+![Evidence 9 — VNLIKE247 execution](evidence/09-vnlike-execution.png)
+
+### Evidence 10: VNLIKE247 network activity
+
+![Evidence 10 — VNLIKE247 network activity](evidence/10-vnlike-network-summary.png)
+
+### Evidence 11: Destination connection
+
+![Evidence 11 — Destination connection](evidence/11-telegram-ip-connection.png)
+
+### Evidence 12: Defender exfiltration event
+
+![Evidence 12 — Defender exfiltration event](evidence/12-defender-exfil-event.png)
+
+### Evidence 13: Response actions
+
+![Evidence 13 — Response actions](evidence/13-response-actions.png)
