@@ -38,6 +38,20 @@ From that session, process logs showed commands creating `system16`, `system32`,
 
 I then checked whether those accounts were actually used. `system32` logged on successfully on Oct 11, including a `RemoteInteractive` session; `system16` and `system32` had successful **Network** logons on Oct 13 Evidence 6. I checked other devices too, but found no evidence of access to a second internal host. The Oct 13 successes were Network logons, not RDP.
 
+
+![oct06 account discovery](evidence/01-oct06-account-discovery.png)
+
+![oct07 rdp correlation](evidence/02-oct07-rdp-correlation.png)
+
+![oct07 account creation](evidence/03-oct07-account-creation.png)
+
+![oct07 persistence activity](evidence/04-oct07-persistence-activity.png)
+
+![oct07 scheduled task](evidence/05-oct07-scheduled-task.png)
+
+![oct11 13 account reuse](evidence/06-oct11-13-account-reuse.png)
+
+
 ### Defender tampering and suspicious execution
 
 During host scoping, I found a separate High-severity compromised-device case with 17 alerts Evidence 7. The Oct 10 alert story included `dControl.exe` (DefenderControl), attempts to turn off antivirus, Defender registry/service changes, and PowerShell activity Evidence 8. This is evidence of attempted defense evasion.
@@ -45,6 +59,14 @@ During host scoping, I found a separate High-severity compromised-device case wi
 `VNLIKE247.exe` executed around 5:52 AM under `wdagutilityaccounts`, launched by `explorer.exe` Evidence 9. Its SHA256 was:
 
 `7392942a2151c61d587d8aa557f30cad09bf2cb528e420f855f2fd84f4fa5072`
+
+
+![case1296 overview](evidence/07-case1296-overview.png)
+
+![defender tampering](evidence/08-defender-tampering.png)
+
+![vnlike execution](evidence/09-vnlike-execution.png)
+
 
 ### Network activity and suspected transfer
 
@@ -58,6 +80,14 @@ I also checked Rclone and WinRAR. The observed Rclone command downloaded an arch
 
 **Case relationship:** Both cases involve the same host, and `116.98.254.228` appears in the Oct 8 RDP evidence and as an entity in Case 1296. I found no direct evidence that the same person ran both attacks.
 
+
+![vnlike network summary](evidence/10-vnlike-network-summary.png)
+
+![telegram ip connection](evidence/11-telegram-ip-connection.png)
+
+![defender exfil event](evidence/12-defender-exfil-event.png)
+
+
 ## Response status
 
 These were **automated Defender actions**, not changes I made Evidence 13:
@@ -68,6 +98,10 @@ These were **automated Defender actions**, not changes I made Evidence 13:
 | Disable `WDAGUtilityAccounts` (Oct 10) | Skipped |
 | Isolate `mts-contractorpc1` (twice, Oct 10) | Skipped |
 | Uncontain `WDAGUtilityAccounts` (Oct 15) | Completed |
+
+
+![response actions](evidence/13-response-actions.png)
+
 
 ### IR handoff
 
