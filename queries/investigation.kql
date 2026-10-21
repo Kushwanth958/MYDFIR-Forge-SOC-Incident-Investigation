@@ -1,0 +1,55 @@
+// Queries below are independent; run one block at a time in Microsoft Defender XDR.
+// Dates here are UTC. Broad pivots were used during investigation; focused pivots reproduce evidence.
+
+// 1. Post-RDP command discovery: Oct 6 (CDT)
+DeviceProcessEvents
+| where Timestamp between (datetime(2026-10-06T05:00:00Z) .. datetime(2026-10-07T05:00:00Z))
+| where DeviceName =~ "mts-contractorpc1"
+| where FileName in~ ("cmd.exe", "net.exe", "net1.exe")
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, ProcessRemoteSessionIP
+| order by Timestamp asc
+
+// 2. Oct 7 administrator authentication: full CDT local day
+DeviceLogonEvents
+| where Timestamp between (datetime(2026-10-07T05:00:00Z) .. datetime(2026-10-08T05:00:00Z))
+| where DeviceName =~ "mts-contractorpc1" and AccountName =~ "administrator"
+| project Timestamp, ActionType, LogonType, AccountName, RemoteIP, LogonId, DeviceName
+| order by Timestamp asc
+
+// 3. Account creation and administrative commands associated with identified remote session
+DeviceProcessEvents
+| where Timestamp between (datetime(2026-10-07T05:00:00Z) .. datetime(2026-10-08T05:00:00Z))
+| where DeviceName =~ "mts-contractorpc1"
+| where ProcessRemoteSessionIP == "116.118.45.151"
+| where FileName in~ ("net.exe", "net1.exe", "reg.exe", "schtasks.exe", "attrib.exe", "cmd.exe")
+| project Timestamp, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, ProcessRemoteSessionIP
+| order by Timestamp asc
+
+// 4. Account reuse across devices, Oct 7–14
+DeviceLogonEvents
+| where Timestamp between (datetime(2026-10-07T00:00:00Z) .. datetime(2026-10-15T00:00:00Z))
+| where AccountName in~ ("system16", "system32", "system64")
+| project Timestamp, DeviceName, AccountName, ActionType, LogonType, RemoteIP
+| order by Timestamp asc
+
+// 5. VNLIKE execution
+DeviceProcessEvents
+| where Timestamp between (datetime(2026-10-10T05:00:00Z) .. datetime(2026-10-11T05:00:00Z))
+| where DeviceName =~ "mts-contractorpc1" and FileName =~ "VNLIKE247.exe"
+| project Timestamp, DeviceName, AccountName, FileName, FolderPath, SHA256, InitiatingProcessFileName
+| order by Timestamp asc
+
+// 6. Broad network groupings (group count != connection count or distinct IPs)
+DeviceNetworkEvents
+| where Timestamp between (datetime(2026-10-10T05:00:00Z) .. datetime(2026-10-14T05:00:00Z))
+| where DeviceName =~ "mts-contractorpc1" and InitiatingProcessFileName =~ "VNLIKE247.exe"
+| summarize TotalConnections=count(), SuccessfulConnections=countif(ActionType == "ConnectionSuccess"), FailedConnections=countif(ActionType == "ConnectionFailed"), FirstSeen=min(Timestamp), LastSeen=max(Timestamp) by RemoteIP, RemotePort
+| order by SuccessfulConnections desc, TotalConnections desc
+
+// 7. Reproduce the specific Defender exfiltration indicator's connection
+DeviceNetworkEvents
+| where Timestamp between (datetime(2026-10-10T05:00:00Z) .. datetime(2026-10-11T05:00:00Z))
+| where DeviceName =~ "mts-contractorpc1" and InitiatingProcessFileName =~ "VNLIKE247.exe"
+| where RemoteIP == "149.154.166.110"
+| project Timestamp, DeviceName, InitiatingProcessFileName, RemoteIP, RemotePort, Protocol, ActionType
+| order by Timestamp asc
