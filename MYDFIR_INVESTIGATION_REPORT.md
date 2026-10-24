@@ -73,5 +73,3 @@ I checked later logons across available devices but found no confirmed second in
 
 **Lab outcome:** Investigation documented and classified as True Positive. Automated isolation was skipped, and no manual remediation was performed or verified. Incident 2565 should remain In Progress pending response validation.
 
-## Selected evidence
-
