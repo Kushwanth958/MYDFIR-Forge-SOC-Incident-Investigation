@@ -1,11 +1,11 @@
-# MYDFIR Forge — Investigation Report
+# Report Template
 
 **Cases:** 1290 (RDP alert), 1296 / Incident 2565 (compromised device)  
 **Host:** `mts-contractorpc1`  
 **Period reviewed:** October 6–15, 2026 (CDT, UTC−5)  
 **Assessment:** True Positive — malicious persistence and attempted defense evasion. Suspected data transfer requires further scoping.
 
-## Findings (What did you find)
+## Findings
 
 | Evidence | Result |
 | --- | --- |
@@ -18,7 +18,7 @@
 | Suspected transfer | Defender flagged data staging in `C:\Users\WDAGUtilityAccounts\Desktop\vnlike` at about 5:56 AM Oct 10; a matching successful TCP connection to `149.154.166.110:443` was found |
 | Automated response | Account containment Completed; device isolation Skipped twice; account uncontain Completed on Oct 15 |
 
-## Investigation Summary (What happened)
+## Investigation Summary
 
 I started with Case 1290, a successful administrator RDP login on Oct 6. My initial process search covered only four minutes and missed the `net user` commands at 3:34 PM. After expanding the timeframe, I checked the following day's logons.
 
@@ -27,6 +27,27 @@ On Oct 7, the `RemoteInteractive` event had no source IP, but an `Unlock` event 
 While checking other alerts for the same host, I found separate Case 1296. Its Oct 10 detections showed DefenderControl and attempts to disable antivirus. `VNLIKE247.exe` also executed and made outbound network connections. Defender reported a suspected transfer from the `vnlike` directory, and a network event confirmed a successful connection to the reported destination. WHOIS/RDAP information associated that destination IP with Telegram infrastructure.
 
 I checked later logons across available devices but found no confirmed second internal host. The two cases share a device and some related indicators, but I couldn't prove a single operator controlled both. Defender's automated isolation actions were skipped, so I did not mark the incident remediated.
+
+
+![RDP correlation](evidence/02-oct07-rdp-correlation.png)
+
+![Account creation](evidence/03-oct07-account-creation.png)
+
+![Scheduled-task evidence](evidence/05-oct07-scheduled-task.png)
+
+
+![Defender tampering](evidence/08-defender-tampering.png)
+
+![VNLIKE247 execution](evidence/09-vnlike-execution.png)
+
+
+![Matching connection](evidence/11-telegram-ip-connection.png)
+
+![Defender transfer detection](evidence/12-defender-exfil-event.png)
+
+![Automated response status](evidence/13-response-actions.png)
+
+
 
 ## Who, What, When, Where, Why, How
 
@@ -54,26 +75,3 @@ I checked later logons across available devices but found no confirmed second in
 
 ## Selected evidence
 
-**RDP correlation and persistence**
-
-![RDP correlation](evidence/02-oct07-rdp-correlation.png)
-
-![Account creation](evidence/03-oct07-account-creation.png)
-
-![Scheduled-task evidence](evidence/05-oct07-scheduled-task.png)
-
-**Defender tampering and suspicious executable**
-
-![Defender tampering](evidence/08-defender-tampering.png)
-
-![VNLIKE247 execution](evidence/09-vnlike-execution.png)
-
-**Suspected transfer and response status**
-
-![Matching connection](evidence/11-telegram-ip-connection.png)
-
-![Defender transfer detection](evidence/12-defender-exfil-event.png)
-
-![Automated response status](evidence/13-response-actions.png)
-
-[Full investigation and additional screenshots](INVESTIGATION_REPORT.md) · [KQL queries](queries/investigation.kql)
